@@ -1,0 +1,699 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evidence Management | E-Crime Biomatch Engine</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 24px;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f3f6fb;
+            color: #1f2937;
+        }
+
+        .container {
+            max-width: 1500px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: 30px;
+            color: #172554;
+        }
+
+        .subtitle {
+            margin: 0;
+            color: #64748b;
+            line-height: 1.5;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .button {
+            display: inline-block;
+            border: none;
+            border-radius: 7px;
+            padding: 11px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .refresh {
+            background: #e2e8f0;
+            color: #1e293b;
+        }
+
+        .add {
+            background: #2563eb;
+            color: white;
+        }
+
+        .dashboard {
+            background: #0f766e;
+            color: white;
+        }
+
+        .button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
+        }
+
+        .message {
+            display: none;
+            padding: 12px 15px;
+            border-radius: 7px;
+            margin-bottom: 16px;
+            overflow-wrap: anywhere;
+        }
+
+        .message.error {
+            display: block;
+            color: #991b1b;
+            background: #fee2e2;
+        }
+
+        .message.success {
+            display: block;
+            color: #166534;
+            background: #dcfce7;
+        }
+
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            min-width: 1250px;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 13px 12px;
+            text-align: left;
+            vertical-align: top;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        th {
+            background: #f8fafc;
+            color: #334155;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .type-badge {
+            display: inline-block;
+            padding: 5px 9px;
+            background: #dbeafe;
+            color: #1d4ed8;
+            border-radius: 20px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .image-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            min-width: 200px;
+        }
+
+        .evidence-image-item {
+            width: 105px;
+        }
+
+        .evidence-image-item img {
+            display: block;
+            width: 100px;
+            height: 75px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid #dbe2ea;
+            background: #f1f5f9;
+        }
+
+        .image-link {
+            display: block;
+            margin-top: 5px;
+            font-size: 11px;
+            color: #2563eb;
+            text-decoration: none;
+            overflow-wrap: anywhere;
+        }
+
+        .image-link:hover {
+            text-decoration: underline;
+        }
+
+        .no-image {
+            color: #64748b;
+            font-size: 12px;
+        }
+
+        .file-path {
+            max-width: 180px;
+            overflow-wrap: anywhere;
+            color: #475569;
+        }
+
+        .delete-button {
+            border: none;
+            border-radius: 6px;
+            padding: 8px 11px;
+            background: #dc2626;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .delete-button:hover {
+            background: #b91c1c;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 30px;
+            color: #64748b;
+        }
+
+        .loading {
+            padding: 25px;
+            text-align: center;
+            color: #64748b;
+        }
+
+        @media (max-width: 700px) {
+            body {
+                padding: 14px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .panel {
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <div class="header">
+        <div>
+            <h1>Evidence Management</h1>
+            <p class="subtitle">
+                View, manage and delete evidence records linked to cases.
+            </p>
+        </div>
+
+        <div class="actions">
+            <button class="button refresh" id="refreshButton" type="button">
+                Refresh
+            </button>
+
+            <a class="button add" href="/add-evidence.html">
+                + Add Evidence
+            </a>
+
+            <a class="button dashboard" href="/dashboard.html">
+                Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div id="message" class="message" role="status" aria-live="polite"></div>
+
+    <div class="panel">
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                <tr>
+                    <th>Evidence ID</th>
+                    <th>Case ID</th>
+                    <th>Evidence Type</th>
+                    <th>Evidence Images</th>
+                    <th>Evidence Name</th>
+                    <th>Description</th>
+                    <th>Evidence Date</th>
+                    <th>File Path</th>
+                    <th>Created Date</th>
+                    <th>Action</th>
+                </tr>
+                </thead>
+
+                <tbody id="evidenceTableBody">
+                <tr>
+                    <td colspan="10" class="loading">Loading evidence records...</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    "use strict";
+
+    const API_URL = "/api/evidence";
+
+    const sampleImages = {
+        "Digital": [
+            "/evidence-images/digital/digital-1.webp",
+            "/evidence-images/digital/digital-2.webp",
+            "/evidence-images/digital/digital-3.webp"
+        ],
+        "Document": [
+            "/evidence-images/document/document-1.webp",
+            "/evidence-images/document/document-2.webp",
+            "/evidence-images/document/document-3.webp"
+        ],
+        "Photograph": [
+            "/evidence-images/photograph/photograph-1.webp",
+            "/evidence-images/photograph/photograph-2.webp",
+            "/evidence-images/photograph/photograph-3.webp"
+        ],
+        "Video": [
+            "/evidence-images/video/video-1.webp",
+            "/evidence-images/video/video-2.webp",
+            "/evidence-images/video/video-3.webp"
+        ],
+        "Device": [
+            "/evidence-images/device/device-1.webp",
+            "/evidence-images/device/device-2.webp",
+            "/evidence-images/device/device-3.webp"
+        ],
+        "Other": [
+            "/evidence-images/other/other-1.webp",
+            "/evidence-images/other/other-2.webp",
+            "/evidence-images/other/other-3.webp"
+        ],
+        "Witness Statement": [
+            "/evidence-images/witness-statement/witness-statement-1.webp",
+            "/evidence-images/witness-statement/witness-statement-2.webp",
+            "/evidence-images/witness-statement/witness-statement-3.webp"
+        ],
+        "CCTV Footage": [
+            "/evidence-images/cctv-footage/cctv-footage-1.webp",
+            "/evidence-images/cctv-footage/cctv-footage-2.webp",
+            "/evidence-images/cctv-footage/cctv-footage-3.webp"
+        ],
+        "Fingerprint Evidence": [
+            "/evidence-images/fingerprint-evidence/fingerprint-evidence-1.webp",
+            "/evidence-images/fingerprint-evidence/fingerprint-evidence-2.webp",
+            "/evidence-images/fingerprint-evidence/fingerprint-evidence-3.webp"
+        ],
+        "Forensic Report": [
+            "/evidence-images/forensic-report/forensic-report-1.webp",
+            "/evidence-images/forensic-report/forensic-report-2.webp",
+            "/evidence-images/forensic-report/forensic-report-3.webp"
+        ]
+    };
+
+    const tableBody = document.getElementById("evidenceTableBody");
+    const messageBox = document.getElementById("message");
+    const refreshButton = document.getElementById("refreshButton");
+
+    function showMessage(message, type = "error") {
+        messageBox.textContent = message;
+        messageBox.className = "message " + type;
+    }
+
+    function clearMessage() {
+        messageBox.textContent = "";
+        messageBox.className = "message";
+    }
+
+    function makeCell(value, className = "") {
+        const td = document.createElement("td");
+        td.textContent = value === null || value === undefined || value === ""
+            ? "—"
+            : String(value);
+
+        if (className) {
+            td.className = className;
+        }
+
+        return td;
+    }
+
+    function formatDate(value) {
+        if (!value) return "—";
+
+        const text = String(value);
+
+        // Preserve date-only values without timezone shifting.
+        const dateOnly = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+        if (dateOnly) {
+            return `${dateOnly[3]}/${dateOnly[2]}/${dateOnly[1]}`;
+        }
+
+        const date = new Date(value);
+
+        if (Number.isNaN(date.getTime())) {
+            return text;
+        }
+
+        return date.toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            timeZone: "Asia/Kolkata"
+        });
+    }
+
+    function normalizeSavedPaths(savedPath) {
+        if (!savedPath || typeof savedPath !== "string") {
+            return [];
+        }
+
+        const trimmed = savedPath.trim();
+
+        if (!trimmed || trimmed.startsWith("sample:")) {
+            return [];
+        }
+
+        // Some records store paths as JSON arrays.
+        if (trimmed.startsWith("[")) {
+            try {
+                const parsed = JSON.parse(trimmed);
+
+                if (Array.isArray(parsed)) {
+                    return parsed.filter(path => typeof path === "string");
+                }
+
+                return [];
+            } catch (error) {
+                console.warn("Could not parse saved evidence image paths.", error);
+                return [];
+            }
+        }
+
+        return [trimmed];
+    }
+
+    function safeLocalImagePath(value) {
+        if (typeof value !== "string") return null;
+
+        let path = value.trim();
+
+        if (!path || path.startsWith("sample:")) return null;
+
+        // Only permit local project image paths.
+        path = path.replace(/^\/+/, "");
+
+        if (path.includes("..") || path.includes("\\") || path.includes("?")) {
+            return null;
+        }
+
+        if (!/^(evidence-images|uploads)\/[a-zA-Z0-9/_\-. ]+$/.test(path)) {
+            return null;
+        }
+
+        if (!/\.(png|jpe?g|webp|gif)$/i.test(path)) {
+            return null;
+        }
+
+        return "/" + path;
+    }
+
+    function getEvidenceImages(record) {
+        const savedPaths = normalizeSavedPaths(record.file_path)
+            .map(safeLocalImagePath)
+            .filter(Boolean);
+
+        // Prefer the actual saved image paths.
+        if (savedPaths.length > 0) {
+            return [...new Set(savedPaths)];
+        }
+
+        // For older records without a real image path, show type-based
+        // example images when the corresponding files exist.
+        return sampleImages[record.evidence_type] || [];
+    }
+
+    function renderImages(record) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "image-list";
+
+        const paths = getEvidenceImages(record);
+
+        if (paths.length === 0) {
+            const note = document.createElement("span");
+            note.className = "no-image";
+            note.textContent = "No image available";
+            wrapper.appendChild(note);
+            return wrapper;
+        }
+
+        paths.forEach((path, index) => {
+            const item = document.createElement("div");
+            item.className = "evidence-image-item";
+
+            const img = document.createElement("img");
+            img.src = path;
+            img.alt = "Evidence image " + (index + 1);
+            img.loading = "lazy";
+
+            const link = document.createElement("a");
+            link.className = "image-link";
+            link.href = path;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            link.textContent = "View Image " + (index + 1);
+
+            img.addEventListener("error", function () {
+                item.replaceChildren();
+
+                const unavailable = document.createElement("span");
+                unavailable.className = "no-image";
+                unavailable.textContent = "Image file not found";
+
+                item.appendChild(unavailable);
+            });
+
+            item.appendChild(img);
+            item.appendChild(link);
+            wrapper.appendChild(item);
+        });
+
+        return wrapper;
+    }
+
+    function renderEvidence(records) {
+        tableBody.replaceChildren();
+
+        if (!Array.isArray(records) || records.length === 0) {
+            const row = document.createElement("tr");
+            const cell = document.createElement("td");
+
+            cell.colSpan = 10;
+            cell.className = "empty";
+            cell.textContent = "No evidence records found.";
+
+            row.appendChild(cell);
+            tableBody.appendChild(row);
+            return;
+        }
+
+        records.forEach(record => {
+            const row = document.createElement("tr");
+
+            row.appendChild(makeCell(record.evidence_id));
+            row.appendChild(makeCell(record.case_id));
+
+            const typeCell = document.createElement("td");
+            const badge = document.createElement("span");
+            badge.className = "type-badge";
+            badge.textContent = record.evidence_type || "Other";
+            typeCell.appendChild(badge);
+            row.appendChild(typeCell);
+
+            const imageCell = document.createElement("td");
+            imageCell.appendChild(renderImages(record));
+            row.appendChild(imageCell);
+
+            // Keep each value in its own matching column.
+            row.appendChild(makeCell(record.evidence_name));
+            row.appendChild(makeCell(record.description));
+            row.appendChild(makeCell(formatDate(record.evidence_date)));
+
+            const pathCell = document.createElement("td");
+            pathCell.className = "file-path";
+            pathCell.textContent = record.file_path || "—";
+            row.appendChild(pathCell);
+
+            row.appendChild(makeCell(formatDate(record.created_date)));
+
+            const actionCell = document.createElement("td");
+            const deleteButton = document.createElement("button");
+
+            deleteButton.type = "button";
+            deleteButton.className = "delete-button";
+            deleteButton.textContent = "Delete";
+            deleteButton.addEventListener("click", function () {
+                deleteEvidence(record.evidence_id, deleteButton);
+            });
+
+            actionCell.appendChild(deleteButton);
+            row.appendChild(actionCell);
+
+            tableBody.appendChild(row);
+        });
+    }
+
+    async function readJsonResponse(response) {
+        const responseText = await response.text();
+
+        let data;
+
+        try {
+            data = JSON.parse(responseText);
+        } catch (error) {
+            console.error(
+                "Expected JSON but received a non-JSON response:",
+                response.url,
+                response.status,
+                responseText.slice(0, 500)
+            );
+
+            throw new Error(
+                "The server returned HTML instead of JSON for " +
+                response.url +
+                ". Check the API route and server terminal."
+            );
+        }
+
+        if (!response.ok) {
+            throw new Error(
+                data.message || data.error || "Request failed: HTTP " + response.status
+            );
+        }
+
+        return data;
+    }
+
+    async function loadEvidence() {
+        clearMessage();
+
+        refreshButton.disabled = true;
+        tableBody.innerHTML =
+            '<tr><td colspan="10" class="loading">Loading evidence records...</td></tr>';
+
+        try {
+            const response = await fetch(API_URL, {
+                method: "GET",
+                headers: {
+                    "Accept": "application/json"
+                },
+                cache: "no-store"
+            });
+
+            const data = await readJsonResponse(response);
+
+            if (data.success !== true || !Array.isArray(data.evidence)) {
+                throw new Error(
+                    "The evidence API response format is incorrect. Expected { success: true, evidence: [] }."
+                );
+            }
+
+            renderEvidence(data.evidence);
+        } catch (error) {
+            console.error("Error loading evidence:", error);
+
+            tableBody.innerHTML =
+                '<tr><td colspan="10" class="empty">Unable to load evidence records.</td></tr>';
+
+            showMessage(error.message || "Unable to load evidence records.");
+        } finally {
+            refreshButton.disabled = false;
+        }
+    }
+
+    async function deleteEvidence(id, button) {
+        const confirmed = window.confirm(
+            "Are you sure you want to delete evidence record #" + id + "?"
+        );
+
+        if (!confirmed) return;
+
+        button.disabled = true;
+
+        try {
+            const response = await fetch(
+                API_URL + "/" + encodeURIComponent(id),
+                {
+                    method: "DELETE",
+                    headers: {
+                        "Accept": "application/json"
+                    }
+                }
+            );
+
+            const data = await readJsonResponse(response);
+
+            if (data.success === false) {
+                throw new Error(data.message || "Could not delete the evidence record.");
+            }
+
+            showMessage("Evidence record #" + id + " deleted successfully.", "success");
+
+            await loadEvidence();
+        } catch (error) {
+            console.error("Error deleting evidence:", error);
+
+            showMessage(error.message || "Unable to delete evidence.");
+            button.disabled = false;
+        }
+    }
+
+    refreshButton.addEventListener("click", loadEvidence);
+
+    // Load evidence when the page opens.
+    loadEvidence();
+</script>
+</body>
+</html>

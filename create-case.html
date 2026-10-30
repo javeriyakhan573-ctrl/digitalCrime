@@ -1,0 +1,247 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Create Case - E-Crime BioMatch Engine</title>
+
+    <script>
+        // Check login before loading the page
+        const loggedIn = localStorage.getItem("loggedIn");
+
+        if (loggedIn !== "true") {
+            window.location.href = "/login.html";
+        }
+    </script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            background: #f3f4f6;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 30px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        h1 {
+            text-align: center;
+            color: #1f2937;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #6b7280;
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 7px;
+            font-weight: bold;
+            color: #374151;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 15px;
+        }
+
+        textarea {
+            height: 120px;
+            resize: vertical;
+        }
+
+        button {
+            width: 100%;
+            padding: 13px;
+            border: none;
+            border-radius: 6px;
+            background: #2563eb;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        .back {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: #2563eb;
+            text-decoration: none;
+        }
+
+        #message {
+            text-align: center;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Create New Case</h1>
+
+    <p class="subtitle">
+        E-Crime BioMatch Engine
+    </p>
+
+    <form id="caseForm">
+
+        <label for="caseId">Case ID</label>
+        <input
+            type="text"
+            id="caseId"
+            placeholder="Example: CASE010"
+            required
+        >
+
+        <label for="caseTitle">Case Title</label>
+        <input
+            type="text"
+            id="caseTitle"
+            placeholder="Enter case title"
+            required
+        >
+
+        <label for="crimeType">Crime Type</label>
+        <select id="crimeType" required>
+            <option value="">Select crime type</option>
+            <option value="Theft">Theft</option>
+            <option value="Fraud">Fraud</option>
+            <option value="Cyber Crime">Cyber Crime</option>
+            <option value="Missing Person">Missing Person</option>
+            <option value="Other">Other</option>
+        </select>
+
+        <label for="caseDate">Date</label>
+        <input
+            type="date"
+            id="caseDate"
+            required
+        >
+
+        <label for="location">Location</label>
+        <input
+            type="text"
+            id="location"
+            placeholder="Example: Kerala"
+            required
+        >
+
+        <label for="description">Description</label>
+        <textarea
+            id="description"
+            placeholder="Enter case description"
+            required
+        ></textarea>
+
+        <label for="status">Case Status</label>
+        <select id="status" required>
+            <option value="Active">Active</option>
+            <option value="Pending">Pending</option>
+            <option value="Closed">Closed</option>
+        </select>
+
+        <button type="submit">
+            Create Case
+        </button>
+
+    </form>
+
+    <div id="message"></div>
+
+    <a href="dashboard.html" class="back">
+        ← Back to Dashboard
+    </a>
+
+</div>
+
+<script>
+
+document.getElementById("caseForm").addEventListener("submit", async function(event) {
+
+    event.preventDefault();
+
+    const message = document.getElementById("message");
+
+    const caseData = {
+        caseId: document.getElementById("caseId").value.trim(),
+        caseTitle: document.getElementById("caseTitle").value.trim(),
+        crimeType: document.getElementById("crimeType").value,
+        caseDate: document.getElementById("caseDate").value,
+        location: document.getElementById("location").value.trim(),
+        description: document.getElementById("description").value.trim(),
+        status: document.getElementById("status").value
+    };
+
+    try {
+
+        message.textContent = "Saving case...";
+
+        const response = await fetch("/api/cases", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(caseData)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+
+            message.textContent = "Case saved successfully!";
+
+            document.getElementById("caseForm").reset();
+
+        } else {
+
+            message.textContent =
+                "Error: " + (result.message || "Could not save case.");
+
+        }
+
+    } catch (error) {
+
+        console.error("Backend connection error:", error);
+
+        message.textContent =
+            "Could not connect to backend.";
+
+    }
+
+});
+
+</script>
+
+</body>
+</html>
+```

@@ -1,0 +1,651 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evidence Management - E-Crime BioMatch Engine</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 25px;
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            color: #243047;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 22px;
+        }
+
+        h1 {
+            margin: 0;
+            color: #173b72;
+        }
+
+        .subtitle {
+            color: #64748b;
+            margin-top: 8px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-block;
+            border: none;
+            border-radius: 7px;
+            padding: 11px 16px;
+            text-decoration: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .btn-primary {
+            background: #2457a7;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #243047;
+        }
+
+        .card {
+            background: white;
+            padding: 22px;
+            border-radius: 12px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1100px;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 13px 12px;
+            border-bottom: 1px solid #e5eaf1;
+            vertical-align: middle;
+            font-size: 14px;
+        }
+
+        th {
+            background: #edf3fb;
+            color: #173b72;
+            white-space: nowrap;
+        }
+
+        tr:hover td {
+            background: #fafcff;
+        }
+
+        .type-badge {
+            display: inline-block;
+            padding: 5px 9px;
+            border-radius: 15px;
+            background: #e7efff;
+            color: #2457a7;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .sample-card {
+            width: 110px;
+            text-align: center;
+        }
+
+        .sample-image {
+            width: 90px;
+            height: 65px;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto 5px;
+            border-radius: 7px;
+            background: #f5f8fc;
+        }
+
+        .sample-label {
+            color: #64748b;
+            font-size: 11px;
+        }
+
+        .message {
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 7px;
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+
+        .error {
+            background: #fef2f2;
+            color: #b91c1c;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 30px;
+            color: #64748b;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 14px;
+            }
+
+            .card {
+                padding: 12px;
+            }
+
+            h1 {
+                font-size: 23px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <div class="header">
+            <div>
+                <h1>Evidence Management</h1>
+                <p class="subtitle">
+                    View and manage evidence records linked to cases.
+                </p>
+            </div>
+
+            <div class="actions">
+                <button class="btn btn-secondary" id="refreshBtn">
+                    Refresh
+                </button>
+
+                <a href="/add-evidence.html" class="btn btn-primary">
+                    + Add Evidence
+                </a>
+            </div>
+        </div>
+
+        <div id="message" hidden></div>
+
+        <div class="card">
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Evidence ID</th>
+                            <th>Case ID</th>
+                            <th>Evidence Type</th>
+                            <th>Sample Illustration</th>
+                            <th>Evidence Name</th>
+                            <th>Description</th>
+                            <th>Evidence Date</th>
+                            <th>File Path</th>
+                            <th>Created Date</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="evidenceTable">
+                        <tr>
+                            <td colspan="9" class="empty">
+                                Loading evidence records...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Require login before displaying this page.
+        if (localStorage.getItem("loggedIn") !== "true") {
+            window.location.replace("/login.html");
+        }
+
+        const tableBody = document.getElementById("evidenceTable");
+        const messageBox = document.getElementById("message");
+
+        // All 10 supported evidence types.
+        const illustrations = {
+            Digital: {
+                title: "Digital Evidence",
+                icon: "screen",
+                description: "Computer and digital data"
+            },
+            Document: {
+                title: "Document",
+                icon: "document",
+                description: "Paper records and documents"
+            },
+            Photograph: {
+                title: "Photograph",
+                icon: "photo",
+                description: "Sample photograph illustration"
+            },
+            Video: {
+                title: "Video",
+                icon: "video",
+                description: "Video recording illustration"
+            },
+            Device: {
+                title: "Device",
+                icon: "device",
+                description: "Electronic device illustration"
+            },
+            Other: {
+                title: "Other Evidence",
+                icon: "folder",
+                description: "Other evidence category"
+            },
+            "Witness Statement": {
+                title: "Witness Statement",
+                icon: "witness",
+                description: "Written witness statement illustration"
+            },
+            "CCTV Footage": {
+                title: "CCTV Footage",
+                icon: "cctv",
+                description: "Security camera illustration"
+            },
+            "Fingerprint Evidence": {
+                title: "Fingerprint Evidence",
+                icon: "fingerprint",
+                description: "Fingerprint record illustration"
+            },
+            "Forensic Report": {
+                title: "Forensic Report",
+                icon: "forensic",
+                description: "Forensic report illustration"
+            }
+        };
+
+        // Create illustrations using SVG.
+        function makeIllustration(kind) {
+            const drawings = {
+                screen: `
+                    <rect x="18" y="15" width="64" height="43"
+                          rx="4" fill="#dbeafe"
+                          stroke="#2563eb" stroke-width="3"/>
+                    <path d="M50 58 V69 M35 69 H65"
+                          stroke="#2563eb" stroke-width="4"
+                          stroke-linecap="round"/>
+                    <rect x="27" y="23" width="46" height="26"
+                          rx="2" fill="#60a5fa"/>
+                    <circle cx="50" cy="36" r="6" fill="#ffffff"/>
+                `,
+
+                document: `
+                    <path d="M29 12 H61 L76 27 V78 H29 Z"
+                          fill="#ffffff" stroke="#2563eb"
+                          stroke-width="3" stroke-linejoin="round"/>
+                    <path d="M61 12 V27 H76"
+                          fill="#dbeafe" stroke="#2563eb"
+                          stroke-width="3"/>
+                    <path d="M39 40 H65 M39 49 H65
+                             M39 58 H61 M39 67 H58"
+                          stroke="#60a5fa" stroke-width="3"
+                          stroke-linecap="round"/>
+                `,
+
+                photo: `
+                    <rect x="15" y="22" width="70" height="52"
+                          rx="5" fill="#dcfce7"
+                          stroke="#16a34a" stroke-width="3"/>
+                    <circle cx="37" cy="38" r="7" fill="#facc15"/>
+                    <path d="M19 67 L40 46 L53 58 L65 43
+                             L81 64 V70 H19 Z"
+                          fill="#4ade80"/>
+                `,
+
+                video: `
+                    <rect x="15" y="25" width="48" height="45"
+                          rx="5" fill="#dbeafe"
+                          stroke="#2563eb" stroke-width="3"/>
+                    <path d="M63 37 L84 27 V68 L63 58 Z"
+                          fill="#60a5fa" stroke="#2563eb"
+                          stroke-width="3" stroke-linejoin="round"/>
+                    <circle cx="39" cy="47" r="10" fill="#2563eb"/>
+                    <path d="M37 41 L47 47 L37 53 Z" fill="#ffffff"/>
+                `,
+
+                device: `
+                    <rect x="32" y="9" width="36" height="70"
+                          rx="7" fill="#dbeafe"
+                          stroke="#2563eb" stroke-width="3"/>
+                    <rect x="37" y="19" width="26" height="46"
+                          rx="2" fill="#93c5fd"/>
+                    <circle cx="50" cy="72" r="2" fill="#2563eb"/>
+                `,
+
+                folder: `
+                    <path d="M13 28 Q13 23 18 23 H40 L48 32 H80
+                             Q86 32 86 38 V70 Q86 76 80 76 H19
+                             Q13 76 13 70 Z"
+                          fill="#fef3c7" stroke="#d97706"
+                          stroke-width="3" stroke-linejoin="round"/>
+                    <path d="M13 39 H86"
+                          stroke="#d97706" stroke-width="3"/>
+                `,
+
+                witness: `
+                    <rect x="22" y="10" width="56" height="70"
+                          rx="4" fill="#ffffff"
+                          stroke="#2563eb" stroke-width="3"/>
+                    <circle cx="36" cy="28" r="6" fill="#93c5fd"/>
+                    <path d="M47 26 H67 M31 43 H68 M31 51 H68
+                             M31 59 H61"
+                          stroke="#60a5fa" stroke-width="3"
+                          stroke-linecap="round"/>
+                    <path d="M42 69 Q51 63 61 69"
+                          fill="none" stroke="#2563eb"
+                          stroke-width="2" stroke-linecap="round"/>
+                `,
+
+                cctv: `
+                    <rect x="20" y="24" width="47" height="32"
+                          rx="5" fill="#dbeafe"
+                          stroke="#2563eb" stroke-width="3"/>
+                    <path d="M67 31 L83 23 V57 L67 49 Z"
+                          fill="#60a5fa" stroke="#2563eb"
+                          stroke-width="3" stroke-linejoin="round"/>
+                    <circle cx="43" cy="40" r="10" fill="#2563eb"/>
+                    <circle cx="43" cy="40" r="5" fill="#ffffff"/>
+                    <path d="M33 57 L28 70 H58 L53 57"
+                          fill="#bfdbfe" stroke="#2563eb"
+                          stroke-width="3" stroke-linejoin="round"/>
+                `,
+
+                fingerprint: `
+                    <g fill="none" stroke="#2563eb"
+                       stroke-width="3" stroke-linecap="round">
+                        <path d="M50 15 C29 15 22 31 24 46"/>
+                        <path d="M50 23 C34 23 30 35 31 47"/>
+                        <path d="M50 31 C40 31 38 39 39 49"/>
+                        <path d="M50 15 C71 15 78 31 76 46"/>
+                        <path d="M50 23 C66 23 70 35 69 47"/>
+                        <path d="M50 31 C60 31 62 39 61 49"/>
+                        <path d="M27 54 C30 69 39 77 50 78"/>
+                        <path d="M73 54 C70 69 61 77 50 78"/>
+                        <path d="M34 55 C37 65 42 70 50 71"/>
+                        <path d="M66 55 C63 65 58 70 50 71"/>
+                        <path d="M50 40 V57"/>
+                    </g>
+                `,
+
+                forensic: `
+                    <path d="M26 10 H59 L75 26 V80 H26 Z"
+                          fill="#ffffff" stroke="#2563eb"
+                          stroke-width="3" stroke-linejoin="round"/>
+                    <path d="M59 10 V26 H75"
+                          fill="#dbeafe" stroke="#2563eb"
+                          stroke-width="3" stroke-linejoin="round"/>
+                    <path d="M34 38 H64 M34 46 H64"
+                          stroke="#60a5fa" stroke-width="3"
+                          stroke-linecap="round"/>
+                    <rect x="34" y="54" width="29" height="13"
+                          rx="2" fill="#dcfce7"
+                          stroke="#16a34a" stroke-width="2"/>
+                    <path d="M38 63 L44 58 L49 62 L58 56"
+                          fill="none" stroke="#16a34a"
+                          stroke-width="2" stroke-linecap="round"/>
+                    <path d="M35 73 H54"
+                          stroke="#60a5fa" stroke-width="2"
+                          stroke-linecap="round"/>
+                `
+            };
+
+            const svg = `
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     width="100" height="90" viewBox="0 0 100 90">
+                    <rect width="100" height="90"
+                          rx="9" fill="#f5f8fc"/>
+                    ${drawings[kind] || drawings.folder}
+                </svg>
+            `;
+
+            return "data:image/svg+xml;charset=UTF-8," +
+                encodeURIComponent(svg);
+        }
+
+        // Select the correct illustration for each record.
+        function getIllustrationType(evidence) {
+            const filePath = String(evidence.file_path || "");
+
+            // Prefer the icon marker saved when adding evidence.
+            if (filePath.startsWith("sample:")) {
+                const savedIcon = filePath.substring("sample:".length);
+
+                const savedType = Object.keys(illustrations).find(
+                    type => illustrations[type].icon === savedIcon
+                );
+
+                if (savedType) {
+                    return savedType;
+                }
+            }
+
+            // Fallback for older records without a sample marker.
+            const type = String(evidence.evidence_type || "")
+                .trim()
+                .toLowerCase();
+
+            if (type.includes("witness")) return "Witness Statement";
+            if (type.includes("cctv")) return "CCTV Footage";
+            if (type.includes("fingerprint")) return "Fingerprint Evidence";
+            if (type.includes("forensic")) return "Forensic Report";
+            if (type.includes("digital")) return "Digital";
+
+            if (type.includes("document") || type.includes("report")) {
+                return "Document";
+            }
+
+            if (
+                type.includes("photograph") ||
+                type.includes("photo") ||
+                type.includes("picture") ||
+                type.includes("image")
+            ) {
+                return "Photograph";
+            }
+
+            if (type.includes("video")) return "Video";
+
+            if (
+                type.includes("device") ||
+                type.includes("electronic")
+            ) {
+                return "Device";
+            }
+
+            return "Other";
+        }
+
+        function addCell(row, value) {
+            const cell = document.createElement("td");
+
+            cell.textContent =
+                value == null || value === "" ? "—" : String(value);
+
+            row.appendChild(cell);
+            return cell;
+        }
+
+        function formatDate(value) {
+            if (!value) return "—";
+
+            const date = new Date(value);
+
+            if (Number.isNaN(date.getTime())) {
+                return String(value);
+            }
+
+            return date.toLocaleDateString();
+        }
+
+        function showMessage(text, isError = false) {
+            messageBox.textContent = text;
+            messageBox.hidden = false;
+            messageBox.className = isError
+                ? "message error"
+                : "message";
+        }
+
+        function renderEvidence(records) {
+            tableBody.replaceChildren();
+
+            if (!Array.isArray(records) || records.length === 0) {
+                const row = document.createElement("tr");
+                const cell = document.createElement("td");
+
+                cell.colSpan = 9;
+                cell.className = "empty";
+                cell.textContent = "No evidence records found.";
+
+                row.appendChild(cell);
+                tableBody.appendChild(row);
+                return;
+            }
+
+            records.forEach(evidence => {
+                const row = document.createElement("tr");
+
+                addCell(row, evidence.evidence_id);
+                addCell(row, evidence.case_id);
+
+                // Evidence type badge.
+                const typeCell = addCell(row, evidence.evidence_type);
+                const badge = document.createElement("span");
+
+                badge.className = "type-badge";
+                badge.textContent = evidence.evidence_type || "Other";
+
+                typeCell.replaceChildren(badge);
+
+                // Matching sample illustration.
+                const imageCell = document.createElement("td");
+                const sampleType = getIllustrationType(evidence);
+                const sample = illustrations[sampleType];
+
+                const sampleCard = document.createElement("div");
+                sampleCard.className = "sample-card";
+
+                const img = document.createElement("img");
+                img.className = "sample-image";
+                img.src = makeIllustration(sample.icon);
+                img.alt = sample.title + " sample illustration";
+
+                const caption = document.createElement("div");
+                caption.className = "sample-label";
+                caption.textContent = sample.title;
+
+                sampleCard.append(img, caption);
+                imageCell.appendChild(sampleCard);
+                row.appendChild(imageCell);
+
+                addCell(row, evidence.evidence_name);
+                addCell(row, evidence.description);
+                addCell(row, formatDate(evidence.evidence_date));
+
+                // Do not expose the internal sample marker.
+                const filePath = String(evidence.file_path || "");
+
+                addCell(
+                    row,
+                    filePath.startsWith("sample:")
+                        ? "Built-in sample"
+                        : filePath
+                );
+
+                addCell(row, formatDate(evidence.created_date));
+
+                tableBody.appendChild(row);
+            });
+        }
+
+        async function loadEvidence() {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="9" class="empty">
+                        Loading evidence records...
+                    </td>
+                </tr>
+            `;
+
+            messageBox.hidden = true;
+
+            try {
+                const response = await fetch("/api/evidence");
+
+                if (!response.ok) {
+                    throw new Error(
+                        "Could not load evidence records. HTTP " +
+                        response.status
+                    );
+                }
+
+                const data = await response.json();
+
+                // Supports a direct array or { evidence: [...] }.
+                const records = Array.isArray(data)
+                    ? data
+                    : data.evidence;
+
+                if (!Array.isArray(records)) {
+                    throw new Error(
+                        "Unexpected response from the evidence API."
+                    );
+                }
+
+                renderEvidence(records);
+            } catch (error) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="empty">
+                            Unable to load evidence. Please try Refresh.
+                        </td>
+                    </tr>
+                `;
+
+                showMessage(
+                    error.message || "An unexpected error occurred.",
+                    true
+                );
+            }
+        }
+
+        document.getElementById("refreshBtn")
+            .addEventListener("click", loadEvidence);
+
+        loadEvidence();
+    </script>
+</body>
+</html>

@@ -1,0 +1,759 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Add Evidence | E-Crime BioMatch Engine</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    margin: 0;
+    padding: 25px;
+    background: #f1f5f9;
+    color: #1e293b;
+}
+
+.container {
+    max-width: 900px;
+    margin: auto;
+}
+
+.header {
+    background: #0f172a;
+    color: white;
+    padding: 25px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+}
+
+.header p {
+    color: #cbd5e1;
+}
+
+.card {
+    background: white;
+    padding: 28px;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px #0000000d;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.field {
+    margin-bottom: 18px;
+}
+
+.full {
+    grid-column: 1 / -1;
+}
+
+label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+input, select, textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    font-size: 15px;
+    background: white;
+}
+
+textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.hint {
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.5;
+    margin-top: 6px;
+}
+
+.preview {
+    border: 2px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 20px;
+    background: #f8fafc;
+    text-align: center;
+}
+
+.image-gallery {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    width: 100%;
+    margin-top: 18px;
+}
+
+.sample-image {
+    min-width: 0;
+    padding: 8px;
+    border: 2px solid #cbd5e1;
+    border-radius: 10px;
+    background: white;
+    cursor: pointer;
+}
+
+.sample-image img {
+    display: block;
+    width: 100%;
+    height: 130px;
+    object-fit: contain;
+    border-radius: 6px;
+}
+
+.sample-image.selected {
+    border: 3px solid #2563eb;
+    background: #dbeafe;
+}
+
+.sample-image p {
+    margin: 8px 0 0;
+    font-size: 13px;
+}
+
+.selected-preview {
+    display: block;
+    width: 100%;
+    max-width: 480px;
+    max-height: 280px;
+    object-fit: contain;
+    margin: 18px auto 0;
+    border-radius: 8px;
+}
+
+.selected-preview[hidden] {
+    display: none;
+}
+
+.symbol {
+    font-size: 45px;
+    margin-bottom: 10px;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 22px;
+}
+
+button, .link-button {
+    border: none;
+    padding: 12px 18px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: bold;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.primary {
+    background: #2563eb;
+    color: white;
+}
+
+.secondary {
+    background: #e2e8f0;
+    color: #1e293b;
+}
+
+.danger {
+    background: #dc2626;
+    color: white;
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.message {
+    display: none;
+    margin-top: 18px;
+    padding: 12px;
+    border-radius: 7px;
+    overflow-wrap: anywhere;
+}
+
+.success {
+    display: block;
+    background: #dcfce7;
+    color: #166534;
+}
+
+.error {
+    display: block;
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+@media (max-width: 650px) {
+    body {
+        padding: 12px;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .full {
+        grid-column: auto;
+    }
+
+    .card {
+        padding: 18px;
+    }
+
+    .image-gallery {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<header class="header">
+    <h1>Add Evidence</h1>
+    <p>E-Crime BioMatch Engine — Evidence Management</p>
+</header>
+
+<main class="card">
+<form id="evidenceForm">
+
+<div class="form-grid">
+
+    <div class="field">
+        <label for="caseId">Select Case *</label>
+        <select id="caseId" required>
+            <option value="">Loading cases...</option>
+        </select>
+        <p class="hint">
+            Select the case to which this evidence belongs.
+        </p>
+    </div>
+
+    <div class="field">
+        <label for="evidenceType">Evidence Type *</label>
+        <select id="evidenceType" required>
+            <option value="">Select evidence type</option>
+            <option value="Digital">Digital Evidence</option>
+            <option value="Document">Document</option>
+            <option value="Photograph">Photograph</option>
+            <option value="Video">Video</option>
+            <option value="Device">Electronic Device</option>
+            <option value="Witness Statement">Witness Statement</option>
+            <option value="CCTV Footage">CCTV Footage</option>
+            <option value="Fingerprint Evidence">Fingerprint Evidence</option>
+            <option value="Forensic Report">Forensic Report</option>
+            <option value="Other">Other</option>
+        </select>
+    </div>
+
+    <div class="field full">
+        <label for="evidenceName">Evidence Name *</label>
+        <input type="text" id="evidenceName" required
+               maxlength="255" placeholder="Enter evidence name">
+    </div>
+
+    <div class="field full">
+        <label for="description">Description</label>
+        <textarea id="description"
+                  placeholder="Describe the evidence"></textarea>
+    </div>
+
+    <div class="field">
+        <label for="evidenceDate">Evidence Date</label>
+        <input type="date" id="evidenceDate">
+    </div>
+
+    <div class="field">
+        <label for="evidenceFile">Upload Your Own Image (Optional)</label>
+        <input type="file" id="evidenceFile" accept="image/*">
+        <p class="hint">
+            Your image will be uploaded when the server supports the
+            image-upload endpoint. Sample images are illustrative only.
+        </p>
+    </div>
+
+    <div class="field full">
+        <label>Evidence Image Gallery</label>
+
+        <div class="preview">
+            <div class="symbol" id="previewSymbol">📁</div>
+            <strong id="previewTitle">No evidence selected</strong>
+            <p id="previewDescription">
+                Select an evidence type to see sample images.
+            </p>
+
+            <div class="image-gallery" id="imageGallery"></div>
+
+            <img id="previewImage" class="selected-preview"
+                 alt="Selected evidence image" hidden>
+
+            <div class="actions" style="justify-content:center">
+                <button type="button" id="clearImageButton"
+                        class="danger">
+                    Clear Image Selection
+                </button>
+            </div>
+        </div>
+
+        <p class="hint">
+            Select a sample image or upload your own. Sample images
+            are not verified evidence.
+        </p>
+    </div>
+
+</div>
+
+<div class="actions">
+    <button type="submit" class="primary" id="saveButton">
+        Save Evidence
+    </button>
+
+    <button type="reset" class="secondary">
+        Clear Form
+    </button>
+
+    <a href="/evidence.html" class="link-button secondary">
+        View Evidence
+    </a>
+
+    <a href="/dashboard.html" class="link-button secondary">
+        Dashboard
+    </a>
+</div>
+
+<div id="message" class="message" role="status"></div>
+
+</form>
+</main>
+</div>
+
+<script>
+const form = document.getElementById("evidenceForm");
+const caseIdSelect = document.getElementById("caseId");
+const evidenceType = document.getElementById("evidenceType");
+const evidenceFile = document.getElementById("evidenceFile");
+const previewSymbol = document.getElementById("previewSymbol");
+const previewTitle = document.getElementById("previewTitle");
+const previewDescription = document.getElementById("previewDescription");
+const previewImage = document.getElementById("previewImage");
+const imageGallery = document.getElementById("imageGallery");
+const message = document.getElementById("message");
+const saveButton = document.getElementById("saveButton");
+const clearImageButton = document.getElementById("clearImageButton");
+
+const evidenceImages = {
+    "Digital": [
+        "/evidence-images/digital/digital-1.webp",
+        "/evidence-images/digital/digital-2.webp",
+        "/evidence-images/digital/digital-3.webp"
+    ],
+    "Document": [
+        "/evidence-images/document/document-1.webp",
+        "/evidence-images/document/document-2.webp",
+        "/evidence-images/document/document-3.webp"
+    ],
+    "Photograph": [
+        "/evidence-images/photograph/photograph-1.webp",
+        "/evidence-images/photograph/photograph-2.webp",
+        "/evidence-images/photograph/photograph-3.webp"
+    ],
+    "Video": [
+        "/evidence-images/cctv/cctv-1.webp",
+        "/evidence-images/cctv/cctv-2.webp",
+        "/evidence-images/cctv/cctv-3.webp"
+    ],
+    "Device": [
+        "/evidence-images/device/device-1.webp",
+        "/evidence-images/device/device-2.webp",
+        "/evidence-images/device/device-3.webp"
+    ],
+    "Witness Statement": [
+        "/evidence-images/witness-statement/witness-statement-1.webp",
+        "/evidence-images/witness-statement/witness-statement-2.webp",
+        "/evidence-images/witness-statement/witness-statement-3.webp"
+    ],
+    "CCTV Footage": [
+        "/evidence-images/cctv/cctv-1.webp",
+        "/evidence-images/cctv/cctv-2.webp",
+        "/evidence-images/cctv/cctv-3.webp"
+    ],
+    "Fingerprint Evidence": [
+        "/evidence-images/fingerprint/fingerprint-1.webp",
+        "/evidence-images/fingerprint/fingerprint-2.webp",
+        "/evidence-images/fingerprint/fingerprint-3.webp"
+    ],
+    "Forensic Report": [
+        "/evidence-images/forensic-report/forensic-report-1.webp",
+        "/evidence-images/forensic-report/forensic-report-2.webp",
+        "/evidence-images/forensic-report/forensic-report-3.webp"
+    ],
+    "Other": [
+        "/models/evidence-images/digital-1.jpg"
+    ]
+};
+
+const evidenceTitles = {
+    "Digital": "Digital Evidence",
+    "Document": "Document Evidence",
+    "Photograph": "Photographic Evidence",
+    "Video": "Video Evidence",
+    "Device": "Electronic Device",
+    "Witness Statement": "Witness Statement",
+    "CCTV Footage": "CCTV Footage",
+    "Fingerprint Evidence": "Fingerprint Evidence",
+    "Forensic Report": "Forensic Report",
+    "Other": "Other Evidence"
+};
+
+let selectedSampleImage = "";
+let userSelectedImage = false;
+let uploadedPreviewUrl = "";
+
+function showMessage(text, success) {
+    message.textContent = text;
+    message.className = "message " + (success ? "success" : "error");
+}
+
+function clearMessage() {
+    message.textContent = "";
+    message.className = "message";
+}
+
+async function loadCases() {
+    caseIdSelect.innerHTML = '<option value="">Loading cases...</option>';
+    caseIdSelect.disabled = true;
+
+    try {
+        const response = await fetch("/api/cases");
+        if (!response.ok) {
+            throw new Error("Could not load cases from the server.");
+        }
+
+        const result = await response.json();
+
+        // Supports either an array response or { success: true, cases: [...] }.
+        const cases = Array.isArray(result)
+            ? result
+            : (Array.isArray(result.cases) ? result.cases : []);
+
+        caseIdSelect.innerHTML = '<option value="">Select a case</option>';
+
+        cases.forEach(function(item) {
+            const id = Number(item.case_id ?? item.caseId);
+            if (!Number.isInteger(id) || id <= 0) return;
+
+            const option = document.createElement("option");
+            option.value = String(id);
+
+            const number = item.case_number || ("Case " + id);
+            const title = item.case_title || "Untitled case";
+            const status = item.status ? " — " + item.status : "";
+
+            option.textContent =
+                "ID " + id + " — " + number + " — " + title + status;
+
+            caseIdSelect.appendChild(option);
+        });
+
+        if (cases.length === 0) {
+            caseIdSelect.innerHTML =
+                '<option value="">No cases found</option>';
+            showMessage("No cases were returned by /api/cases.", false);
+        } else {
+            clearMessage();
+        }
+    } catch (error) {
+        caseIdSelect.innerHTML =
+            '<option value="">Could not load cases</option>';
+        showMessage(
+            error.message + " Check that your Node.js server is running.",
+            false
+        );
+    } finally {
+        caseIdSelect.disabled = false;
+    }
+}
+
+function clearImageSelection() {
+    selectedSampleImage = "";
+    userSelectedImage = false;
+    evidenceFile.value = "";
+
+    if (uploadedPreviewUrl) {
+        URL.revokeObjectURL(uploadedPreviewUrl);
+        uploadedPreviewUrl = "";
+    }
+
+    previewImage.hidden = true;
+    previewImage.removeAttribute("src");
+
+    imageGallery.querySelectorAll(".sample-image").forEach(function(card) {
+        card.classList.remove("selected");
+        card.setAttribute("aria-pressed", "false");
+    });
+
+    previewDescription.textContent =
+        "No image selected. Choose a sample image or upload your own.";
+}
+
+function updatePreview() {
+    const type = evidenceType.value;
+    imageGallery.innerHTML = "";
+    selectedSampleImage = "";
+    userSelectedImage = false;
+    evidenceFile.value = "";
+
+    if (uploadedPreviewUrl) {
+        URL.revokeObjectURL(uploadedPreviewUrl);
+        uploadedPreviewUrl = "";
+    }
+
+    previewImage.hidden = true;
+    previewImage.removeAttribute("src");
+
+    if (!type) {
+        previewSymbol.hidden = false;
+        previewSymbol.textContent = "📁";
+        previewTitle.textContent = "No evidence selected";
+        previewDescription.textContent =
+            "Select an evidence type to see its sample images.";
+        return;
+    }
+
+    previewSymbol.hidden = true;
+    previewTitle.textContent = evidenceTitles[type] || type;
+    previewDescription.textContent =
+        "Select a sample image. A blue border marks your selection.";
+
+    const images = evidenceImages[type] || [];
+
+    images.forEach(function(path, index) {
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = "sample-image";
+        card.setAttribute("aria-pressed", "false");
+
+        const img = document.createElement("img");
+        img.src = path;
+        img.alt = (evidenceTitles[type] || type) +
+            " sample " + (index + 1);
+
+        img.onerror = function() {
+            card.remove();
+            if (imageGallery.children.length === 0) {
+                previewDescription.textContent =
+                    "No sample images loaded. Check that the files exist.";
+            }
+        };
+
+        const caption = document.createElement("p");
+        caption.textContent = "Sample image " + (index + 1);
+
+        card.appendChild(img);
+        card.appendChild(caption);
+        imageGallery.appendChild(card);
+
+        card.addEventListener("click", function() {
+            selectedSampleImage = path;
+            userSelectedImage = false;
+            evidenceFile.value = "";
+
+            imageGallery.querySelectorAll(".sample-image").forEach(function(item) {
+                item.classList.remove("selected");
+                item.setAttribute("aria-pressed", "false");
+            });
+
+            card.classList.add("selected");
+            card.setAttribute("aria-pressed", "true");
+
+            previewImage.src = path;
+            previewImage.hidden = false;
+            previewTitle.textContent = evidenceTitles[type] || type;
+            previewDescription.textContent =
+                "Selected sample image " + (index + 1);
+
+            showMessage("Sample image selected.", true);
+        });
+    });
+}
+
+evidenceType.addEventListener("change", function() {
+    clearMessage();
+    updatePreview();
+});
+
+evidenceFile.addEventListener("change", function() {
+    const file = evidenceFile.files[0];
+    clearMessage();
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+        evidenceFile.value = "";
+        showMessage("Please choose an image file.", false);
+        return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+        evidenceFile.value = "";
+        showMessage("Please choose an image smaller than 10 MB.", false);
+        return;
+    }
+
+    selectedSampleImage = "";
+    userSelectedImage = true;
+
+    imageGallery.querySelectorAll(".sample-image").forEach(function(card) {
+        card.classList.remove("selected");
+        card.setAttribute("aria-pressed", "false");
+    });
+
+    if (uploadedPreviewUrl) {
+        URL.revokeObjectURL(uploadedPreviewUrl);
+    }
+
+    uploadedPreviewUrl = URL.createObjectURL(file);
+    previewImage.src = uploadedPreviewUrl;
+    previewImage.hidden = false;
+    previewSymbol.hidden = true;
+    previewTitle.textContent = file.name;
+    previewDescription.textContent =
+        "Local preview. The image will be uploaded when you save.";
+});
+
+clearImageButton.addEventListener("click", function() {
+    clearImageSelection();
+    clearMessage();
+});
+
+form.addEventListener("reset", function() {
+    clearMessage();
+    setTimeout(function() {
+        clearImageSelection();
+        updatePreview();
+    }, 0);
+});
+
+form.addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    const caseId = Number(caseIdSelect.value);
+    const type = evidenceType.value;
+    const name = document.getElementById("evidenceName").value.trim();
+    const file = evidenceFile.files[0];
+
+    if (!Number.isInteger(caseId) || caseId <= 0) {
+        showMessage("Please select a valid case.", false);
+        return;
+    }
+
+    if (!type || !name) {
+        showMessage("Please enter Evidence Type and Evidence Name.", false);
+        return;
+    }
+
+    if (!selectedSampleImage && !userSelectedImage) {
+        showMessage("Select a sample image or upload your own image.", false);
+        return;
+    }
+
+    saveButton.disabled = true;
+    saveButton.textContent = "Saving...";
+
+    try {
+        let response;
+
+        if (file) {
+            // This branch requires a backend route that accepts
+            // multipart/form-data and stores the uploaded image.
+            const data = new FormData();
+            data.append("caseId", String(caseId));
+            data.append("evidenceType", type);
+            data.append("evidenceName", name);
+            data.append(
+                "description",
+                document.getElementById("description").value.trim()
+            );
+            data.append(
+                "evidenceDate",
+                document.getElementById("evidenceDate").value
+            );
+            data.append("evidenceFile", file);
+
+            response = await fetch("/api/evidence/upload", {
+                method: "POST",
+                body: data
+            });
+        } else {
+            // Uses the existing JSON evidence endpoint for sample images.
+            const payload = {
+                caseId: caseId,
+                evidenceType: type,
+                evidenceName: name,
+                description:
+                    document.getElementById("description").value.trim(),
+                evidenceDate:
+                    document.getElementById("evidenceDate").value || null,
+                filePath: selectedSampleImage
+            };
+
+            response = await fetch("/api/evidence", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
+        }
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(
+                result.message || "Failed to save evidence."
+            );
+        }
+
+        showMessage(
+            "Evidence saved successfully! Evidence ID: " +
+            (result.evidenceId ?? "saved") +
+            ", Case ID: " + (result.caseId ?? caseId) + ".",
+            true
+        );
+    } catch (error) {
+        showMessage("Could not save evidence: " + error.message, false);
+    } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = "Save Evidence";
+    }
+});
+
+loadCases();
+updatePreview();
+</script>
+
+</body>
+</html>
+```

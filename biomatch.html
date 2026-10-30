@@ -1,0 +1,1162 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E-Crime BioMatch - Face Matching</title>
+  <script src="/node_modules/@vladmandic/face-api/dist/face-api.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+      background: #f5f6fa;
+      color: #172033;
+    }
+
+    h1 {
+      margin-bottom: 5px;
+    }
+
+    .box {
+      margin-top: 20px;
+      padding: 20px;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+    }
+
+    input {
+      padding: 10px;
+      margin: 8px 0;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin-top: 10px;
+      margin-right: 8px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background: #2563eb;
+      color: white;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    button:disabled {
+      background: #999;
+      cursor: not-allowed;
+    }
+
+    img {
+      max-width: 250px;
+      max-height: 220px;
+      display: block;
+      margin-top: 15px;
+      border-radius: 8px;
+    }
+
+    #status {
+      margin-top: 20px;
+      padding: 12px;
+      font-weight: bold;
+      overflow-wrap: anywhere;
+    }
+
+    #video {
+      display: block;
+      margin-top: 15px;
+      width: 500px;
+      max-width: 100%;
+      border-radius: 10px;
+      background: #222;
+    }
+
+    #matchResult {
+      margin-top: 15px;
+      padding: 20px;
+      font-size: 16px;
+      background: #f1f5f9;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      min-height: 50px;
+      overflow-wrap: anywhere;
+    }
+
+    #matchResult img {
+      width: 180px;
+      height: 180px;
+      object-fit: cover;
+    }
+
+    .person {
+      display: inline-block;
+      vertical-align: top;
+      width: 200px;
+      margin: 10px;
+      padding: 15px;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      overflow-wrap: anywhere;
+    }
+
+    .person img {
+      width: 170px;
+      height: 170px;
+      object-fit: cover;
+    }
+
+    .deleteButton {
+      background: #d9534f;
+    }
+
+    .deleteButton:hover {
+      background: #c9302c;
+    }
+
+    .case-info {
+      margin-top: 15px;
+      padding: 15px;
+      background: #e0f2fe;
+      border: 1px solid #7dd3fc;
+      border-radius: 8px;
+      font-weight: bold;
+      overflow-wrap: anywhere;
+    }
+
+    .case-card {
+      margin-top: 15px;
+      padding: 15px;
+      background: #fff;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+    }
+
+    .case-card h3 {
+      margin-top: 0;
+    }
+
+    .case-card p {
+      margin: 7px 0;
+    }
+
+    .match-success {
+      background: #ecfdf5 !important;
+      border: 1px solid #86efac !important;
+    }
+
+    .match-failed {
+      background: #fef2f2 !important;
+      border: 1px solid #fca5a5 !important;
+    }
+
+    .evidence-card {
+      margin-top: 12px;
+      padding: 14px;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+    }
+
+    .evidence-card img {
+      width: 220px;
+      height: auto;
+      max-height: 260px;
+      object-fit: contain;
+    }
+
+    .notice {
+      font-size: 0.92rem;
+      color: #475569;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        margin: 12px;
+      }
+
+      .box {
+        padding: 14px;
+      }
+
+      #matchResult {
+        padding: 12px;
+      }
+
+      .person {
+        width: auto;
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <h1>E-Crime BioMatch</h1>
+  <p>Face Recognition POC</p>
+
+  <div class="box">
+    <h2>Register Person</h2>
+
+    <label for="personName">Person Name:</label><br>
+    <input
+      type="text"
+      id="personName"
+      placeholder="Enter name"
+    ><br>
+
+    <label for="personPhoto">Photograph:</label><br>
+    <input
+      type="file"
+      id="personPhoto"
+      accept="image/*"
+    >
+
+    <img id="photoPreview" alt="Photo preview" hidden>
+
+    <br>
+    <button id="registerButton">Register Person</button>
+  </div>
+
+  <div class="box">
+    <h2>Face Matching</h2>
+
+    <div class="case-info">
+      <div>
+        👤 Matched Person:
+        <span id="matchedPersonDisplay">
+          Waiting for face match...
+        </span>
+      </div>
+
+      <br>
+
+      <div>
+        🆔 Person ID:
+        <span id="personIdDisplay">-</span>
+      </div>
+
+      <br>
+
+      <div>
+        📁 Matched Case ID:
+        <span id="caseIdDisplay">-</span>
+      </div>
+    </div>
+
+    <p>
+      Start the camera to compare a face with consent-based
+      registered profiles. Matches require human review.
+    </p>
+
+    <video id="video" autoplay muted playsinline></video>
+
+    <br>
+
+    <button id="startCameraButton">Start Camera</button>
+    <button id="stopCameraButton">Stop Camera</button>
+
+    <div id="matchResult">Camera not started.</div>
+  </div>
+
+  <div id="status">Loading face-recognition models...</div>
+
+  <div class="box">
+    <h2>Stored Face Profiles</h2>
+    <div id="peopleList">Loading profiles...</div>
+  </div>
+
+<script>
+"use strict";
+
+let modelsLoaded = false;
+let cameraStream = null;
+let matchingInterval = null;
+let lastMatchedPersonId = null;
+let matchingInProgress = false;
+
+const MODEL_URL = "/models";
+const MATCH_THRESHOLD = 0.50;
+
+const caseIdDisplay = document.getElementById("caseIdDisplay");
+const personIdDisplay = document.getElementById("personIdDisplay");
+const matchedPersonDisplay =
+  document.getElementById("matchedPersonDisplay");
+const matchResult = document.getElementById("matchResult");
+const statusElement = document.getElementById("status");
+
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
+
+
+function safeImageUrl(path) {
+  if (!path) return "";
+
+  try {
+    const url = new URL(
+      path.startsWith("/") ? path : "/" + path,
+      window.location.origin
+    );
+
+    if (url.origin !== window.location.origin) {
+      return "";
+    }
+
+    return url.href;
+  } catch (_) {
+    return "";
+  }
+}
+
+
+// Load face-recognition models.
+async function loadModels() {
+  try {
+    statusElement.textContent =
+      "Loading face-recognition models...";
+
+    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+    await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+
+    modelsLoaded = true;
+
+    statusElement.textContent =
+      "✅ Face-recognition models loaded successfully.";
+  } catch (error) {
+    console.error("Model loading error:", error);
+
+    statusElement.textContent =
+      "❌ Failed to load face-recognition models. " +
+      "Check the models folder and browser console.";
+  }
+}
+
+
+// Preview the selected photograph.
+document
+  .getElementById("personPhoto")
+  .addEventListener("change", function () {
+    const file = this.files[0];
+    const preview = document.getElementById("photoPreview");
+
+    if (!file) {
+      preview.removeAttribute("src");
+      preview.hidden = true;
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      this.value = "";
+      preview.removeAttribute("src");
+      preview.hidden = true;
+
+      statusElement.textContent =
+        "Please choose an image file.";
+
+      return;
+    }
+
+    preview.src = URL.createObjectURL(file);
+    preview.hidden = false;
+  });
+
+
+// Register a person and save their face descriptor.
+document
+  .getElementById("registerButton")
+  .addEventListener("click", async function () {
+    const name =
+      document.getElementById("personName").value.trim();
+
+    const photo =
+      document.getElementById("personPhoto").files[0];
+
+    if (!modelsLoaded) {
+      statusElement.textContent =
+        "Please wait for the face models to load.";
+      return;
+    }
+
+    if (!name) {
+  return;
+}
+    
+
+    if (!photo || !photo.type.startsWith("image/")) {
+      statusElement.textContent =
+        "Please select a valid photograph.";
+      return;
+    }
+
+    let imageURL;
+
+    try {
+      statusElement.textContent = "🔍 Detecting face...";
+
+      imageURL = URL.createObjectURL(photo);
+
+      const image = new Image();
+      image.src = imageURL;
+
+      await new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = () => {
+          reject(new Error("Could not read the selected image."));
+        };
+      });
+
+      const detection = await faceapi
+        .detectSingleFace(
+          image,
+          new faceapi.TinyFaceDetectorOptions({
+            inputSize: 416,
+            scoreThreshold: 0.5
+          })
+        )
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+
+      if (!detection) {
+        throw new Error(
+          "No face detected. Please choose a clear photograph."
+        );
+      }
+
+      const descriptor = Array.from(detection.descriptor);
+
+      if (descriptor.length !== 128) {
+        throw new Error("Invalid face descriptor.");
+      }
+
+      statusElement.textContent = "💾 Saving face profile...";
+
+      const formData = new FormData();
+      formData.append("personName", name);
+      formData.append("photo", photo);
+      formData.append(
+        "faceDescriptor",
+        JSON.stringify(descriptor)
+      );
+
+      const response = await fetch("/api/face-registry", {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Registration failed.");
+      }
+
+      statusElement.textContent =
+        "✅ " + (data.message || "Profile registered") +
+        ": " + name;
+
+      document.getElementById("personName").value = "";
+      document.getElementById("personPhoto").value = "";
+
+      document.getElementById("photoPreview")
+        .removeAttribute("src");
+
+      document.getElementById("photoPreview").hidden = true;
+
+      await loadPeople();
+
+    } catch (error) {
+      console.error("Registration error:", error);
+
+      statusElement.textContent =
+        "❌ Registration failed: " + error.message;
+
+    } finally {
+      if (imageURL) {
+        URL.revokeObjectURL(imageURL);
+      }
+    }
+  });
+
+
+// Start the camera.
+document
+  .getElementById("startCameraButton")
+  .addEventListener("click", startCamera);
+
+async function startCamera() {
+  if (!modelsLoaded) {
+    matchResult.textContent =
+      "❌ Please wait for the face models to load.";
+    return;
+  }
+
+  if (cameraStream) return;
+
+  try {
+    cameraStream =
+      await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false
+      });
+
+    const video = document.getElementById("video");
+    video.srcObject = cameraStream;
+
+    await video.play();
+
+    matchResult.className = "";
+    matchResult.textContent =
+      "📷 Camera started. Looking for a possible face match...";
+
+    startFaceMatching();
+
+  } catch (error) {
+    console.error("Camera error:", error);
+
+    matchResult.textContent =
+      "❌ Could not access the camera. " +
+      "Please allow camera permission in Safari.";
+  }
+}
+
+
+// Stop the camera.
+document
+  .getElementById("stopCameraButton")
+  .addEventListener("click", stopCamera);
+
+function stopCamera() {
+  if (matchingInterval) {
+    clearInterval(matchingInterval);
+  }
+
+  matchingInterval = null;
+
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(track => track.stop());
+  }
+
+  cameraStream = null;
+
+  document.getElementById("video").srcObject = null;
+
+  matchResult.className = "";
+  matchResult.textContent = "Camera stopped.";
+
+  matchedPersonDisplay.textContent =
+    "Waiting for face match...";
+
+  personIdDisplay.textContent = "-";
+  caseIdDisplay.textContent = "-";
+
+  lastMatchedPersonId = null;
+  matchingInProgress = false;
+}
+
+
+function startFaceMatching() {
+  if (matchingInterval) {
+    clearInterval(matchingInterval);
+  }
+
+  matchingInterval = setInterval(matchCameraFace, 1500);
+}
+
+
+// Retrieve the cases linked to a registered person.
+async function getCasesForMatchedPerson(personId) {
+  const response = await fetch(
+    "/api/face-registry/" +
+    encodeURIComponent(personId) +
+    "/cases"
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.message || "Could not load cases for matched person."
+    );
+  }
+
+  return data.cases || [];
+}
+
+
+// Display linked Case IDs automatically.
+function displayMatchedCases(cases) {
+  caseIdDisplay.textContent =
+    (!cases || cases.length === 0)
+      ? "No linked case"
+      : cases.map(item => item.case_id).join(", ");
+}
+
+
+// Build the linked case details.
+function buildCaseDetails(cases) {
+  if (!cases || cases.length === 0) {
+    return `
+      <div class="case-card">
+        <strong>
+          No case is linked to this registered person.
+        </strong>
+      </div>
+    `;
+  }
+
+  return cases.map(item => `
+    <div class="case-card">
+      <h3>📁 Case Details</h3>
+
+      <p>
+        <strong>Case ID:</strong>
+        ${escapeHtml(item.case_id)}
+      </p>
+
+      <p>
+        <strong>Case Number:</strong>
+        ${escapeHtml(item.case_number || "N/A")}
+      </p>
+
+      <p>
+        <strong>Case Title:</strong>
+        ${escapeHtml(item.case_title || "N/A")}
+      </p>
+
+      <p>
+        <strong>Crime Type:</strong>
+        ${escapeHtml(item.crime_type || "N/A")}
+      </p>
+
+      <p>
+        <strong>Location:</strong>
+        ${escapeHtml(item.location || "N/A")}
+      </p>
+
+      <p>
+        <strong>Status:</strong>
+        ${escapeHtml(item.status || "N/A")}
+      </p>
+    </div>
+  `).join("");
+}
+
+
+// Retrieve and display evidence for the person's linked cases.
+async function loadEvidenceForMatchedPerson(
+  personId,
+  target = matchResult
+) {
+  const response = await fetch(
+    "/api/face-registry/" +
+    encodeURIComponent(personId) +
+    "/evidence"
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Could not load evidence.");
+  }
+
+  const evidence = data.evidence || [];
+
+  const section = document.createElement("div");
+  const heading = document.createElement("h3");
+
+  heading.textContent = "📂 Evidence Records";
+  section.appendChild(heading);
+
+  if (!evidence.length) {
+    const p = document.createElement("p");
+
+    p.textContent =
+      "No evidence records found for this person's linked cases.";
+
+    section.appendChild(p);
+    target.appendChild(section);
+    return;
+  }
+
+  evidence.forEach(item => {
+    const card = document.createElement("div");
+    card.className = "evidence-card";
+
+    const title = document.createElement("h4");
+    title.textContent = item.evidence_name || "Evidence";
+
+    card.appendChild(title);
+
+    const fields = [
+      ["Evidence ID", item.evidence_id],
+      ["Case ID", item.case_id],
+      ["Case Number", item.case_number],
+      ["Case Title", item.case_title],
+      ["Evidence Type", item.evidence_type],
+      ["Description", item.description],
+      [
+        "Evidence Date",
+        item.evidence_date
+          ? new Date(item.evidence_date).toLocaleDateString(
+              "en-IN",
+              { timeZone: "Asia/Kolkata" }
+            )
+          : "N/A"
+      ]
+    ];
+
+    fields.forEach(([label, value]) => {
+      const p = document.createElement("p");
+      const strong = document.createElement("strong");
+
+      strong.textContent = label + ": ";
+
+      p.appendChild(strong);
+
+      p.appendChild(
+        document.createTextNode(
+          value == null || value === ""
+            ? "N/A"
+            : String(value)
+        )
+      );
+
+      card.appendChild(p);
+    });
+
+    const imageUrl = safeImageUrl(item.file_path);
+
+    if (
+      imageUrl &&
+      /\.(jpg|jpeg|png|gif|webp)$/i.test(
+        new URL(imageUrl).pathname
+      )
+    ) {
+      const link = document.createElement("a");
+
+      link.href = imageUrl;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = "Open evidence image";
+
+      const image = document.createElement("img");
+
+      image.src = imageUrl;
+      image.alt =
+        "Evidence image: " + (item.evidence_name || "Evidence");
+      image.loading = "lazy";
+
+      image.onerror = () => {
+        image.remove();
+        link.textContent =
+          "Evidence image could not be loaded";
+        link.removeAttribute("href");
+      };
+
+      link.appendChild(image);
+      card.appendChild(link);
+
+    } else if (item.file_path) {
+      const link = document.createElement("a");
+
+      link.href = imageUrl || "#";
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = "Open evidence file";
+
+      if (!imageUrl) {
+        link.removeAttribute("href");
+      }
+
+      card.appendChild(link);
+    }
+
+    section.appendChild(card);
+  });
+
+  target.appendChild(section);
+}
+
+
+// Compare the camera face against registered face descriptors.
+async function matchCameraFace() {
+  if (
+    matchingInProgress ||
+    !cameraStream ||
+    !modelsLoaded
+  ) {
+    return;
+  }
+
+  const video = document.getElementById("video");
+
+  if (video.readyState < 2 || !video.videoWidth) {
+    return;
+  }
+
+  matchingInProgress = true;
+
+  try {
+    const detection = await faceapi
+      .detectSingleFace(
+        video,
+        new faceapi.TinyFaceDetectorOptions({
+          inputSize: 416,
+          scoreThreshold: 0.5
+        })
+      )
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+
+    if (!detection) return;
+
+    const profiles = await fetchProfilesForMatching();
+
+    if (!profiles.length) {
+      matchResult.textContent =
+        "No registered face profiles are available.";
+      return;
+    }
+
+    let best = null;
+
+    for (const profile of profiles) {
+      let descriptor = profile.face_descriptor;
+
+      if (typeof descriptor === "string") {
+        try {
+          descriptor = JSON.parse(descriptor);
+        } catch (_) {
+          continue;
+        }
+      }
+
+      if (
+        descriptor &&
+        typeof descriptor === "object" &&
+        !Array.isArray(descriptor) &&
+        descriptor.data
+      ) {
+        descriptor = descriptor.data;
+      }
+
+      if (
+        !Array.isArray(descriptor) ||
+        descriptor.length !== 128
+      ) {
+        continue;
+      }
+
+      const distance = faceapi.euclideanDistance(
+        new Float32Array(detection.descriptor),
+        new Float32Array(descriptor)
+      );
+
+      if (!best || distance < best.distance) {
+        best = {
+          profile,
+          distance
+        };
+      }
+    }
+
+    if (!best || best.distance > MATCH_THRESHOLD) {
+      if (lastMatchedPersonId !== null) {
+        lastMatchedPersonId = null;
+
+        matchedPersonDisplay.textContent =
+          "No possible match";
+
+        personIdDisplay.textContent = "-";
+        caseIdDisplay.textContent = "-";
+
+        matchResult.className = "match-failed";
+
+        matchResult.textContent =
+          "No possible match found. Try better lighting " +
+          "or a clearer view. This system is a prototype.";
+      }
+
+      return;
+    }
+
+    const personId = best.profile.person_id;
+
+    if (
+      String(personId) === String(lastMatchedPersonId)
+    ) {
+      return;
+    }
+
+    lastMatchedPersonId = personId;
+
+    matchedPersonDisplay.textContent =
+      best.profile.person_name || "Unknown";
+
+    personIdDisplay.textContent = personId;
+    caseIdDisplay.textContent = "Loading...";
+
+    matchResult.className = "match-success";
+    matchResult.textContent = "";
+
+    const title = document.createElement("h3");
+    title.textContent = "🟢 POSSIBLE FACE MATCH";
+    matchResult.appendChild(title);
+
+    const name = document.createElement("p");
+    name.textContent =
+      "👤 Registered Person: " +
+      (best.profile.person_name || "Unknown");
+
+    matchResult.appendChild(name);
+
+    const id = document.createElement("p");
+    id.textContent = "🆔 Person ID: " + personId;
+
+    matchResult.appendChild(id);
+
+    const distance = document.createElement("p");
+    distance.textContent =
+      "📏 Match Distance: " + best.distance.toFixed(3);
+
+    matchResult.appendChild(distance);
+
+    const warning = document.createElement("p");
+    warning.className = "notice";
+
+    warning.textContent =
+      "⚠️ This is a possible match and requires human review. " +
+      "It does not establish identity or involvement in a crime.";
+
+    matchResult.appendChild(warning);
+
+    const photoUrl = safeImageUrl(
+      best.profile.photo_path
+    );
+
+    if (photoUrl) {
+      const link = document.createElement("a");
+
+      link.href = photoUrl;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = "Registered profile photograph";
+
+      matchResult.appendChild(link);
+
+      const photo = document.createElement("img");
+
+      photo.src = photoUrl;
+      photo.alt = "Registered profile photograph";
+
+      matchResult.appendChild(photo);
+    }
+
+    try {
+      const cases =
+        await getCasesForMatchedPerson(personId);
+
+      displayMatchedCases(cases);
+
+      matchResult.appendChild(
+        document.createElement("hr")
+      );
+
+      const caseSection = document.createElement("div");
+
+      caseSection.innerHTML = buildCaseDetails(cases);
+
+      matchResult.appendChild(caseSection);
+
+      await loadEvidenceForMatchedPerson(
+        personId,
+        matchResult
+      );
+
+    } catch (error) {
+      console.error(
+        "Case/evidence loading error:",
+        error
+      );
+
+      const message = document.createElement("p");
+
+      message.textContent =
+        "Could not load linked cases or evidence: " +
+        error.message;
+
+      matchResult.appendChild(message);
+
+      caseIdDisplay.textContent = "Could not load";
+    }
+
+  } catch (error) {
+    console.error("Face matching error:", error);
+
+    statusElement.textContent =
+      "Face matching error: " + error.message;
+
+  } finally {
+    matchingInProgress = false;
+  }
+}
+
+
+// Fetch the registered face profiles from the server.
+async function fetchProfilesForMatching() {
+  const response = await fetch("/api/face-registry");
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.message || "Could not load face profiles."
+    );
+  }
+
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  return (
+    data.profiles ||
+    data.people ||
+    data.faceRegistry ||
+    []
+  );
+}
+
+
+// Show registered profiles and their delete buttons.
+async function loadPeople() {
+  const list = document.getElementById("peopleList");
+
+  list.textContent = "Loading profiles...";
+
+  try {
+    const profiles = await fetchProfilesForMatching();
+
+    list.innerHTML = "";
+
+    if (!profiles.length) {
+      list.textContent =
+        "No face profiles registered yet.";
+      return;
+    }
+
+    profiles.forEach(person => {
+      const card = document.createElement("div");
+      card.className = "person";
+
+      const name = document.createElement("h3");
+      name.textContent =
+        person.person_name || "Unnamed person";
+
+      card.appendChild(name);
+
+      const id = document.createElement("p");
+      id.textContent = "Person ID: " + person.person_id;
+
+      card.appendChild(id);
+
+      const url = safeImageUrl(person.photo_path);
+
+      if (url) {
+        const img = document.createElement("img");
+
+        img.src = url;
+        img.alt =
+          "Registered photo for " +
+          (person.person_name || "person");
+
+        img.onerror = () => {
+          img.alt = "Profile image unavailable";
+        };
+
+        card.appendChild(img);
+      }
+
+      const del = document.createElement("button");
+
+      del.className = "deleteButton";
+      del.textContent = "Delete";
+
+      del.addEventListener("click", async () => {
+        const confirmed = confirm(
+          "Delete this registered face profile? " +
+          "This may affect linked case mappings."
+        );
+
+        if (!confirmed) return;
+
+        try {
+          const response = await fetch(
+            "/api/face-registry/" +
+            encodeURIComponent(person.person_id),
+            { method: "DELETE" }
+          );
+
+          const result = await response
+            .json()
+            .catch(() => ({}));
+
+          if (!response.ok) {
+            throw new Error(
+              result.message ||
+              "Delete failed. Check your server delete route."
+            );
+          }
+
+          statusElement.textContent =
+            result.message || "Profile deleted.";
+
+          if (
+            String(lastMatchedPersonId) ===
+            String(person.person_id)
+          ) {
+            stopCamera();
+          }
+
+          await loadPeople();
+
+        } catch (error) {
+          statusElement.textContent =
+            "❌ Could not delete profile: " +
+            error.message;
+        }
+      });
+
+      card.appendChild(del);
+      list.appendChild(card);
+    });
+
+  } catch (error) {
+    console.error("Profile loading error:", error);
+
+    list.textContent =
+      "Could not load profiles: " + error.message;
+  }
+}
+
+
+// Start loading models and saved profiles.
+loadModels();
+loadPeople();
+
+</script>
+</body>
+</html>

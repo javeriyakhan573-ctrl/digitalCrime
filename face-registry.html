@@ -1,0 +1,357 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Crime BioMatch - Face Registry</title>
+
+    <script src="/node_modules/@vladmandic/face-api/dist/face-api.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+            padding: 40px;
+        }
+
+        h1 { color: #1f2937; }
+
+        .subtitle {
+            color: #555;
+            margin-bottom: 25px;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            max-width: 700px;
+            border-radius: 12px;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+        }
+
+        label {
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 7px;
+            font-weight: bold;
+        }
+
+        input[type="text"],
+        input[type="file"],
+        select {
+            padding: 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            background: #2563eb;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover { background: #1d4ed8; }
+
+        button:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+
+        #preview {
+            margin-top: 15px;
+            max-width: 250px;
+            max-height: 250px;
+            display: none;
+            border-radius: 8px;
+        }
+
+        #message {
+            margin-top: 20px;
+            font-weight: bold;
+            overflow-wrap: anywhere;
+        }
+
+        #modelStatus {
+            margin-bottom: 20px;
+            padding: 12px;
+            background: #eef2ff;
+            border-radius: 6px;
+        }
+
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+
+<body>
+    <h1>E-Crime BioMatch</h1>
+    <div class="subtitle">Face Recognition POC</div>
+
+    <div id="modelStatus">Loading face-recognition models...</div>
+
+    <div class="card">
+        <h2>Register Person</h2>
+
+        <form id="faceForm">
+            <label for="personName">Person Name:</label>
+            <input
+                type="text"
+                id="personName"
+                placeholder="Enter name"
+                required
+            >
+
+            <label for="caseId">Link to Case:</label>
+            <select id="caseId" required>
+                <option value="">Loading cases...</option>
+            </select>
+
+            <label for="photo">Photograph:</label>
+            <input
+                type="file"
+                id="photo"
+                accept="image/jpeg,image/png,image/webp"
+                required
+            >
+
+            <img id="preview" alt="Photo Preview">
+
+            <br>
+
+            <button type="submit" id="registerButton" disabled>
+                Register Person
+            </button>
+        </form>
+
+        <div id="message" role="status" aria-live="polite"></div>
+    </div>
+
+<script>
+    let modelsLoaded = false;
+    let casesLoaded = false;
+
+    const MODEL_URL = "/models";
+
+    const photoInput = document.getElementById("photo");
+    const preview = document.getElementById("preview");
+    const form = document.getElementById("faceForm");
+    const message = document.getElementById("message");
+    const modelStatus = document.getElementById("modelStatus");
+    const registerButton = document.getElementById("registerButton");
+    const caseSelect = document.getElementById("caseId");
+
+    function showMessage(text, type = "") {
+        message.textContent = text;
+        message.className = type;
+    }
+
+    function updateRegisterButton() {
+        registerButton.disabled = !(modelsLoaded && casesLoaded);
+    }
+
+    // Load existing cases from the backend.
+    async function loadCases() {
+        caseSelect.innerHTML = '<option value="">Loading cases...</option>';
+
+        try {
+            const response = await fetch("/api/cases");
+            if (!response.ok) {
+                throw new Error("Could not retrieve cases from the server.");
+            }
+
+            const data = await response.json();
+
+            // The current backend returns an array directly.
+            const cases = Array.isArray(data)
+                ? data
+                : (data.cases || []);
+
+            caseSelect.innerHTML = "";
+
+            const placeholder = document.createElement("option");
+            placeholder.value = "";
+            placeholder.textContent = "-- Select a case --";
+            caseSelect.appendChild(placeholder);
+
+            cases.forEach(item => {
+                const option = document.createElement("option");
+                option.value = item.case_id;
+
+                const caseNumber = item.case_number || `Case ${item.case_id}`;
+                const caseTitle = item.case_title || "Untitled case";
+                option.textContent =
+                    `${caseNumber} - ${caseTitle} (ID: ${item.case_id})`;
+
+                caseSelect.appendChild(option);
+            });
+
+            if (cases.length === 0) {
+                caseSelect.innerHTML  =
+                    '<option value="">No cases found. Create a case first.</option>';
+                throw new Error("No cases are available to link.");
+            }
+
+            casesLoaded = true;
+            showMessage("");
+        } catch (error) {
+            casesLoaded = false;
+            caseSelect.innerHTML =
+                '<option value="">Could not load cases</option>';
+            showMessage("❌ " + error.message, "error");
+        }
+
+        updateRegisterButton();
+    }
+
+    // Load face-recognition models.
+    async function loadModels() {
+        try {
+            await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+            await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+            await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+
+            modelsLoaded = true;
+            modelStatus.textContent =
+                "✅ Face-recognition models loaded successfully.";
+            modelStatus.className = "success";
+        } catch (error) {
+            console.error("Model loading error:", error);
+            modelsLoaded = false;
+            modelStatus.textContent =
+                "❌ Failed to load models. Check the /models folder.";
+            modelStatus.className = "error";
+        }
+
+        updateRegisterButton();
+    }
+
+    // Preview the selected photograph.
+    photoInput.addEventListener("change", function () {
+        const file = this.files[0];
+
+        if (!file) {
+            preview.style.display = "none";
+            preview.removeAttribute("src");
+            return;
+        }
+
+        if (!file.type.startsWith("image/")) {
+            showMessage("❌ Please select an image file.", "error");
+            photoInput.value = "";
+            preview.style.display = "none";
+            return;
+        }
+
+        preview.src = URL.createObjectURL(file);
+        preview.style.display = "block";
+        showMessage("");
+    });
+
+    // Register the person and link the selected case.
+    form.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const personName =
+            document.getElementById("personName").value.trim();
+        const caseId = caseSelect.value;
+        const photo = photoInput.files[0];
+
+        if (!modelsLoaded) {
+            showMessage("❌ Face-recognition models are not ready.", "error");
+            return;
+        }
+
+        if (!casesLoaded || !caseId) {
+            showMessage("❌ Please select an existing case.", "error");
+            return;
+        }
+
+        if (!personName || !photo) {
+            showMessage("❌ Enter the name and choose a photograph.", "error");
+            return;
+        }
+
+        if (!photo.type.startsWith("image/")) {
+            showMessage("❌ Please select a valid image.", "error");
+            return;
+        }
+
+        try {
+            registerButton.disabled = true;
+            showMessage("🔍 Detecting face in photograph...");
+
+            const image = await faceapi.bufferToImage(photo);
+
+            const detection = await faceapi
+                .detectSingleFace(
+                    image,
+                    new faceapi.TinyFaceDetectorOptions({
+                        inputSize: 416,
+                        scoreThreshold: 0.5
+                    })
+                )
+                .withFaceLandmarks()
+                .withFaceDescriptor();
+
+            if (!detection) {
+                throw new Error(
+                    "No face detected. Choose a clear photograph with one visible face."
+                );
+            }
+
+            const descriptor = Array.from(detection.descriptor);
+
+            if (
+                descriptor.length !== 128 ||
+                !descriptor.every(Number.isFinite)
+            ) {
+                throw new Error("The face descriptor is invalid.");
+            }
+
+            showMessage("💾 Saving person and case link...");
+
+            const formData = new FormData();
+            formData.append("personName", personName);
+            formData.append("caseId", caseId);
+            formData.append("photo", photo);
+            formData.append("faceDescriptor", JSON.stringify(descriptor));
+
+            const response = await fetch("/api/face-registry", {
+                method: "POST",
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || "Registration failed.");
+            }
+
+            showMessage(
+                `✅ ${personName} registered and linked to Case ID ${caseId}.`,
+                "success"
+            );
+
+            form.reset();
+            preview.removeAttribute("src");
+            preview.style.display = "none";
+
+        } catch (error) {
+            console.error("Registration error:", error);
+            showMessage("❌ Registration failed: " + error.message, "error");
+        } finally {
+            updateRegisterButton();
+        }
+    });
+
+    loadCases();
+    loadModels();
+</script>
+</body>
+</html>

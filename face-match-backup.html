@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>E-Crime BioMatch - Live Face Match</title>
+
+    <script src="/node_modules/@vladmandic/face-api/dist/face-api.js"></script>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+            background: #f5f6fa;
+        }
+
+        h1 {
+            margin-bottom: 5px;
+        }
+
+        .box {
+            margin-top: 20px;
+            padding: 25px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            max-width: 800px;
+        }
+
+        button {
+            padding: 12px 22px;
+            margin: 10px 5px 10px 0;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background: #2563eb;
+            color: white;
+            font-size: 15px;
+        }
+
+        button.stop {
+            background: #dc2626;
+        }
+
+        button:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+
+        video {
+            width: 500px;
+            max-width: 100%;
+            border-radius: 10px;
+            margin-top: 15px;
+            background: black;
+        }
+
+        #status {
+            margin-top: 20px;
+            padding: 15px;
+            font-weight: bold;
+        }
+
+        #result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            background: #f1f5f9;
+        }
+
+        #registeredPhoto {
+            width: 180px;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+
+        .match {
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .distance {
+            margin-top: 10px;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+    <h1>E-Crime BioMatch</h1>
+
+    <p>Live Face Recognition POC</p>
+
+
+    <!-- CAMERA -->
+
+    <div class="box">
+
+        <h2>Live Face Test</h2>
+
+        <p>
+            Start the camera and look directly at the camera.
+        </p>
+
+        <button id="startCamera">
+            📷 Start Camera
+        </button>
+
+        <button id="stopCamera" class="stop" disabled>
+            ⛔ Stop Camera
+        </button>
+
+        <br>
+
+        <video
+            id="video"
+            autoplay
+            muted
+            playsinline>
+        </video>
+
+    </div>
+
+
+    <!-- STATUS -->
+
+    <div id="status">
+        Loading face-recognition models...
+    </div>
+
+
+    <!-- RESULT -->
+
+    <div class="box">
+
+        <h2>Face Match Result</h2>
+
+        <div id="result">
+            Camera not started yet.
+        </div>
+
+    </div>
+
+
+<script>
+
+    // ==========================================
+    // VARIABLES
+    // ==========================================
+
+    let modelsLoaded = false;
+
+    let cameraStream = null;
+
+    let matchingInterval = null;
+
+    let registeredPeople = [];
+
+    const MODEL_URL = "/models";
+
+    const MATCH_THRESHOLD = 0.60;
+
+
+    // ==========================================
+    // ELEMENTS
+    // ==========================================
+
+    const video =
+        document.getElementById("video");
+
+    const status =
+        document.getElementById("status");
+
+    const result =
+        document.getElementById("result");
+
+    const startCameraButton =
+        document.getElementById("startCamera");
+
+    const stopCameraButton =
+        document.getElementById("stopCamera");
+
+
+    // ==========================================
+    // LOAD FACE MODELS
+    // ==========================================
+
+    async function loadModels() {
+
+        try {
+
+            status.textContent =
+                "Loading face-recognition models...";
+
+
+            await faceapi.nets.tinyFaceDetector.loadFromUri(
+                MODEL_URL
+            );
+
+
+            await faceapi.nets.faceLandmark68Net.loadFromUri(
+                MODEL_URL
+            );
+
+
+            await faceapi.nets.faceRecognitionNet.loadFromUri(
+                MODEL_URL
+            );
+
+
+            modelsLoaded = true;
+
+
+            status.textContent =
+                "✅ Face-recognition models loaded successfully.";
+
+
+            await loadRegisteredPeople();
+
+
+        } catch (error) {
+
+            console.error(error);
+
+            status.textContent =
+                "❌ Could not load face-recognition models.";
+
+        }
+
+    }
+
+
+    // ==========================================
+    // LOAD REGISTERED PEOPLE
+    // ==========================================
+
+    async function loadRegisteredPeople() {
+
+        try {
+
+            const response =
+                await fetch(
+                    "/api/face-registry"
+                );
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "Could not load registered profiles."
+                );
+
+            }
+
+
+            const people =
+                await response.json();
+
+
+            registeredPeople =
+                Array.isArray(people)
+                    ? people
+                    : [];
+
+
+            console.log(
+                "Registered people:",
+                registeredPeople
+            );
+
+
+            if (registeredPeople.length === 0) {
+
+                result.innerHTML =
+                    "⚠️ No registered face profiles found.";
+
+                return;
+
+            }
+
+
+            result.innerHTML =
+                "✅ " +
+                registeredPeople.length +
+                " registered face profile(s) ready for matching.";
+
+        } catch (error) {
+
+            console.error(error);
+
+            status.textContent =
+                "❌ Could not load registered profiles.";
+
+        }
+
+    }
+
+
+    // ==========================================
+    // START CAMERA
+    // ==========================================
+
+    startCameraButton.addEventListener(
+        "click",
+        async function () {
+
+            if (!modelsLoaded) {
+
+                status.textContent =
+                    "Please wait for the models to load.";
+
+                return;
+
+            }
+
+
+            if (registeredPeople.length === 0) {
+
+                status.textContent =
+                    "❌ No registered person is available.";
+
+                return;
+
+            }
+
+
+            try {
+
+                cameraStream =
+                    await navigator.mediaDevices.getUserMedia({
+
+                        video: {
+                            facingMode: "user"
+                        },
+
+                        audio: false
+
+                    });
+
+
+                video.srcObject =
+                    cameraStream;
+
+
+                startCameraButton.disabled =
+                    true;
+
+                stopCameraButton.disabled =
+                    false;
+
+
+                status.textContent =
+                    "📷 Camera started. Looking for a face...";
+
+
+                result.innerHTML =
+                    "Look directly at the camera.";
+
+
+                // Start matching
+
+                matchingInterval =
+                    setInterval(
+                        checkLiveFace,
+                        1000
+                    );
+
+
+            } catch (error) {
+
+                console.error(error);
+
+
+                status.textContent =
+                    "❌ Could not access camera.";
+
+                result.innerHTML =
+                    "Please allow camera permission in Safari.";
+
+            }
+
+        }
+    );
+
+
+    // ==========================================
+    // STOP CAMERA
+    // ==========================================
+
+    stopCameraButton.addEventListener(
+        "click",
+        stopCamera
+    );
+
+
+    function stopCamera() {
+
+        if (matchingInterval) {
+
+            clearInterval(
+                matchingInterval
+            );
+
+            matchingInterval = null;
+
+        }
+
+
+        if (cameraStream) {
+
+            cameraStream
+                .getTracks()
+                .forEach(
+                    track => track.stop()
+                );
+
+            cameraStream = null;
+
+        }
+
+
+        video.srcObject = null;
+
+
+        startCameraButton.disabled =
+            false;
+
+        stopCameraButton.disabled =
+            true;
+
+
+        status.textContent =
+            "Camera stopped.";
+
+        result.innerHTML =
+            "Camera is currently stopped.";
+
+    }
+
+
+    // ==========================================
+    // CHECK LIVE FACE
+    // ==========================================
+
+    async function checkLiveFace() {
+
+        if (!video.videoWidth ||
+            !video.videoHeight) {
+
+            return;
+
+        }
+
+
+        try {
+
+            const detection =
+                await faceapi
+                    .detectSingleFace(
+                        video,
+                        new faceapi.TinyFaceDetectorOptions({
+                            inputSize: 320,
+                            scoreThreshold: 0.5
+                        })
+                    )
+                    .withFaceLandmarks()
+                    .withFaceDescriptor();
+
+
+            // No face
+
+            if (!detection) {
+
+                status.textContent =
+                    "🔎 Looking for a face...";
+
+                result.innerHTML =
+                    "No face detected. Please look at the camera.";
+
+                return;
+
+            }
+
+
+            status.textContent =
+                "🔍 Face detected. Comparing...";
+
+
+            const liveDescriptor =
+                detection.descriptor;
+
+
+            let bestPerson = null;
+
+            let bestDistance = Infinity;
+
+
+            // ==========================================
+            // COMPARE WITH REGISTERED PEOPLE
+            // ==========================================
+
+            for (
+                const person
+                of registeredPeople
+            ) {
+
+                if (!person.face_descriptor) {
+
+                    continue;
+
+                }
+
+
+                let storedDescriptor;
+
+
+                try {
+
+                    if (
+                        typeof person.face_descriptor
+                        === "string"
+                    ) {
+
+                        storedDescriptor =
+                            JSON.parse(
+                                person.face_descriptor
+                            );
+
+                    } else {
+
+                        storedDescriptor =
+                            person.face_descriptor;
+
+                    }
+
+                } catch (error) {
+
+                    console.error(
+                        "Invalid stored descriptor:",
+                        person.person_name
+                    );
+
+                    continue;
+
+                }
+
+
+                if (
+                    !Array.isArray(
+                        storedDescriptor
+                    )
+                ) {
+
+                    continue;
+
+                }
+
+
+                const distance =
+                    faceapi.euclideanDistance(
+                        liveDescriptor,
+                        storedDescriptor
+                    );
+
+
+                console.log(
+                    person.person_name,
+                    "distance:",
+                    distance
+                );
+
+
+                if (
+                    distance <
+                    bestDistance
+                ) {
+
+                    bestDistance =
+                        distance;
+
+                    bestPerson =
+                        person;
+
+                }
+
+            }
+
+
+            // ==========================================
+            // NO VALID PROFILE
+            // ==========================================
+
+            if (!bestPerson) {
+
+                status.textContent =
+                    "❌ No usable registered face.";
+
+                result.innerHTML =
+                    "No valid registered face descriptors were found.";
+
+                return;
+
+            }
+
+
+            // ==========================================
+            // MATCH
+            // ==========================================
+
+            if (
+                bestDistance <=
+                MATCH_THRESHOLD
+            ) {
+
+                status.textContent =
+                    "✅ Face match found!";
+
+
+                result.innerHTML =
+
+                    "<div class='match'>" +
+                    "✅ MATCH FOUND" +
+                    "</div>" +
+
+                    "<h3>Name: " +
+                    escapeHtml(
+                        bestPerson.person_name
+                    ) +
+                    "</h3>" +
+
+                    "<p class='distance'>" +
+                    "<strong>Face Distance:</strong> " +
+                    bestDistance.toFixed(4) +
+                    "</p>" +
+
+                    "<p>✅ The live face matches the registered profile.</p>" +
+
+                    (
+                        bestPerson.photo_path
+                        ?
+                        "<img id='registeredPhoto' src='" +
+                        encodeURI(
+                            bestPerson.photo_path
+                        ) +
+                        "' alt='Registered photo'>"
+                        :
+                        ""
+                    );
+
+            } else {
+
+                status.textContent =
+                    "❌ No matching registered face.";
+
+
+                result.innerHTML =
+
+                    "<div class='match'>" +
+                    "❌ NO MATCH" +
+                    "</div>" +
+
+                    "<p>Closest registered profile: <strong>" +
+                    escapeHtml(
+                        bestPerson.person_name
+                    ) +
+                    "</strong></p>" +
+
+                    "<p class='distance'>" +
+                    "<strong>Face Distance:</strong> " +
+                    bestDistance.toFixed(4) +
+                    "</p>";
+
+            }
+
+        } catch (error) {
+
+            console.error(error);
+
+            status.textContent =
+                "❌ Face matching error.";
+
+        }
+
+    }
+
+
+    // ==========================================
+    // SAFE TEXT
+    // ==========================================
+
+    function escapeHtml(text) {
+
+        const div =
+            document.createElement(
+                "div"
+            );
+
+        div.textContent =
+            text;
+
+        return div.innerHTML;
+
+    }
+
+
+    // ==========================================
+    // START
+    // ==========================================
+
+    loadModels();
+
+</script>
+
+</body>
+
+</html>

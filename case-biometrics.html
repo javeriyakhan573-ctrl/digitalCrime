@@ -1,0 +1,360 @@
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Case Biometrics - E-Crime BioMatch</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+            padding: 25px;
+            color: #1f2937;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: auto;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            margin-top: 0;
+            color: #1e3a8a;
+        }
+
+        .subtitle {
+            color: #64748b;
+            line-height: 1.5;
+        }
+
+        .actions {
+            margin: 20px 0;
+        }
+
+        .back-button {
+            display: inline-block;
+            background: #2563eb;
+            color: white;
+            padding: 10px 16px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+
+        .back-button:hover {
+            background: #1d4ed8;
+        }
+
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            min-width: 1100px;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 12px;
+            text-align: left;
+            vertical-align: top;
+            overflow-wrap: anywhere;
+        }
+
+        th {
+            background: #1e3a8a;
+            color: white;
+        }
+
+        tbody tr:nth-child(even) {
+            background: #f8fafc;
+        }
+
+        .delete-button {
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .delete-button:hover {
+            background: #b91c1c;
+        }
+
+        .delete-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        #message {
+            margin: 15px 0;
+            font-weight: bold;
+            line-height: 1.5;
+        }
+
+        .empty-message {
+            text-align: center;
+            padding: 20px;
+            color: #64748b;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Case Biometrics</h1>
+
+    <p class="subtitle">
+        View biometric records linked to registered cases.
+        You can remove a case-biometric link using the Delete button.
+    </p>
+
+    <div class="actions">
+        <a class="back-button" href="/dashboard.html">
+            Back to Dashboard
+        </a>
+    </div>
+
+    <p id="message" role="status" aria-live="polite"></p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Link ID</th>
+                    <th>Case ID</th>
+                    <th>Case Number</th>
+                    <th>Biometric ID</th>
+                    <th>Suspect ID</th>
+                    <th>Fingerprint</th>
+                    <th>Face Data</th>
+                    <th>Iris Data</th>
+                    <th>DNA Profile</th>
+                    <th>Match Date</th>
+                    <th>Added By Admin</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+            <tbody id="caseBiometricTable">
+                <tr>
+                    <td colspan="12" class="empty-message">
+                        Loading data...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<script>
+    // Protect the page using the existing login flag.
+    if (localStorage.getItem("loggedIn") !== "true") {
+        window.location.replace("/login.html");
+    }
+
+    const table = document.getElementById("caseBiometricTable");
+    const message = document.getElementById("message");
+
+    function showMessage(text, success = false) {
+        message.textContent = text;
+        message.style.color = success ? "#15803d" : "#dc2626";
+    }
+
+    function addCell(row, value) {
+        const cell = document.createElement("td");
+        cell.textContent =
+            value === null || value === undefined ? "" : String(value);
+        row.appendChild(cell);
+    }
+
+    async function loadCaseBiometrics() {
+        table.replaceChildren();
+
+        const loadingRow = document.createElement("tr");
+        const loadingCell = document.createElement("td");
+        loadingCell.colSpan = 12;
+        loadingCell.className = "empty-message";
+        loadingCell.textContent = "Loading data...";
+        loadingRow.appendChild(loadingCell);
+        table.appendChild(loadingRow);
+
+        try {
+            const response = await fetch("/api/case-biometrics");
+
+            if (!response.ok) {
+                throw new Error("Failed to load case biometrics.");
+            }
+
+            const data = await response.json();
+
+            table.replaceChildren();
+
+            if (!Array.isArray(data) || data.length === 0) {
+                const row = document.createElement("tr");
+                const cell = document.createElement("td");
+                cell.colSpan = 12;
+                cell.className = "empty-message";
+                cell.textContent = "No case-biometric records found.";
+                row.appendChild(cell);
+                table.appendChild(row);
+                return;
+            }
+
+            data.forEach(item => {
+                const row = document.createElement("tr");
+
+                addCell(row, item.case_biometric_id);
+                addCell(row, item.case_id);
+                addCell(row, item.case_number);
+                addCell(row, item.biometric_id);
+                addCell(row, item.suspect_id);
+                addCell(row, item.fingerprint_hash);
+                addCell(row, item.facial_recognition_data);
+                addCell(row, item.iris_scan_data);
+                addCell(row, item.dna_profile);
+                addCell(row, item.matched_date);
+                addCell(row, item.added_by_admin_id);
+
+                const actionCell = document.createElement("td");
+                const deleteButton = document.createElement("button");
+
+                deleteButton.type = "button";
+                deleteButton.className = "delete-button";
+                deleteButton.textContent = "Delete";
+
+                if (
+                    item.case_biometric_id === null ||
+                    item.case_biometric_id === undefined ||
+                    !Number.isInteger(Number(item.case_biometric_id)) ||
+                    Number(item.case_biometric_id) < 1
+                ) {
+                    deleteButton.disabled = true;
+                    deleteButton.title =
+                        "The server did not return a valid link ID.";
+                } else {
+                    deleteButton.addEventListener("click", async () => {
+                        const linkId = Number(item.case_biometric_id);
+
+                        const confirmed = window.confirm(
+                            "Delete case-biometric link #" + linkId +
+                            "?\n\nThis removes the link, not the underlying " +
+                            "biometric record or case."
+                        );
+
+                        if (!confirmed) {
+                            return;
+                        }
+
+                        deleteButton.disabled = true;
+                        deleteButton.textContent = "Deleting...";
+
+                        try {
+                            const deleteResponse = await fetch(
+                                "/api/case-biometrics/" +
+                                encodeURIComponent(linkId),
+                                {
+                                    method: "DELETE"
+                                }
+                            );
+
+                            const result =
+                                await deleteResponse.json().catch(() => ({}));
+
+                            if (
+                                !deleteResponse.ok ||
+                                result.success !== true
+                            ) {
+                                throw new Error(
+                                    result.message ||
+                                    "The server could not delete this link."
+                                );
+                            }
+
+                            showMessage(
+                                result.message ||
+                                "Case-biometric link deleted successfully.",
+                                true
+                            );
+
+                            await loadCaseBiometrics();
+
+                        } catch (error) {
+                            console.error("Delete error:", error);
+
+                            showMessage(
+                                error.message ||
+                                "Failed to delete the case-biometric link."
+                            );
+
+                            deleteButton.disabled = false;
+                            deleteButton.textContent = "Delete";
+                        }
+                    });
+                }
+
+                actionCell.appendChild(deleteButton);
+                row.appendChild(actionCell);
+                table.appendChild(row);
+            });
+
+        } catch (error) {
+            console.error("Loading case biometrics failed:", error);
+
+            table.replaceChildren();
+
+            const row = document.createElement("tr");
+            const cell = document.createElement("td");
+
+            cell.colSpan = 12;
+            cell.className = "empty-message";
+            cell.textContent = "Failed to load case biometrics.";
+
+            row.appendChild(cell);
+            table.appendChild(row);
+
+            showMessage(
+                "Could not load records. Check that the server is running."
+            );
+        }
+    }
+
+    loadCaseBiometrics();
+</script>
+
+</body>
+</html>
+```
